@@ -2,8 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
+locations = ['3dw', 'bbg', 'eos']
+print "Searching locations", locations
 payload = {"formatType":"DOMESTIC",
-           "retrieveLocId":"3dw\nbbg\neos",
+           "retrieveLocId":"\n".join(locations),
            "reportType":"REPORT",
            "actionType":"notamRetrievalByICAOs"}
 
