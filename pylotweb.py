@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime as dt
+from datetime import timedelta
 
 def main():
     locations = ['3dw', 'bbg', 'eos']
@@ -19,7 +20,7 @@ def main():
 
     soup = BeautifulSoup(r.text)
     qtyNotamsParser= re.compile('.*Number of NOTAMs:\D*(\d+)')
-    asrNotamsParser= re.compile('.*ASR.(\d+)\).TIL.(\d+).*')
+    asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).TIL.(?P<expTime>\d+).*')
     #print soup.prettify()
 
     for qtyNotams in soup.findAll(id="alertFont"):
@@ -37,14 +38,14 @@ def main():
         #print j
         #print asrNotamsParser.findall(notamText)
         if j is not None:
-            asr = j.group(1)
-            expireTime = j.group(2)
+            asr = j.group('asr')
+            expireTime = j.group('expTime')
             #print j.group(0)
-            print "ASR number", asr
-            print "Expires", expireTime, decodeTime(expireTime)
+            print '\x1b[1;31m', "ASR number", '\x1b[m', asr
+            print "Expires", expireTime, decodeTime(expireTime, 6)
 
-def decodeTime(timestamp):
-    return dt.strptime(timestamp, "%y%m%d%H%M")
+def decodeTime(timestamp, offset):
+    return dt.strptime(timestamp, "%y%m%d%H%M") - timedelta(hours=offset)
 
 if __name__ == "__main__":
     main()
