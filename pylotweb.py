@@ -7,6 +7,7 @@ from datetime import timedelta
 def main():
     locations = ['3dw', 'bbg', 'eos']
     towers = ['1007705', '1007704', '1005399']
+    asrlist = []
     print "Searching locations {locations} for towers {towers}".format(
         locations=locations, towers=towers)
 
@@ -30,7 +31,6 @@ def main():
             numNotams = int(m.group(1))
             print "Number of Notams is", numNotams
 
-
     for notam in soup.findAll(id="notamRight"):
         notamText = notam.get_text()
         print notamText
@@ -41,11 +41,57 @@ def main():
             asr = j.group('asr')
             expireTime = j.group('expTime')
             #print j.group(0)
+            asrlist.append(asr)
             print '\x1b[1;31m', "ASR number", '\x1b[m', asr
             print "Expires", expireTime, decodeTime(expireTime, 6)
 
+    for _asr in asrlist:
+        getTowerInfo(_asr)
+    #getTowerInfo("100770")
+
 def decodeTime(timestamp, offset):
     return dt.strptime(timestamp, "%y%m%d%H%M") - timedelta(hours=offset)
+
+def getTowerInfo(asrnum):
+    payload = {"fiSearchByType":"registration_num",
+               "jsValidated":"true",
+               "fiSearchByValue":asrnum,
+               "fiExactMatchInd":"N",
+               "asr_r_state":"",
+               "asr_r_zipcode":"",
+               #"footerSearch":"footerSearch",
+               "Submit":"Submit"}
+    s = requests.Session()
+    s.get("http://wireless2.fcc.gov/UlsApp/AsrSearch/asrRegistrationSearch.jsp")
+    requests.utils.add_dict_to_cookiejar(s.cookies, {"selectedCountys":"cleared", "selectedStates":"cleared"})
+    #print s.cookies
+    #ck = requests.utils.dict_from_cookiejar(s.cookies)
+    #print ck
+    #asrsearch_str = ";JSESSIONID_ASRSEARCH=" + ck['JSESSIONID_ASRSEARCH']
+    #asrsearch_str = ""
+    #print asrsearch_str
+    r = s.post("http://wireless2.fcc.gov/UlsApp/AsrSearch/asrResults.jsp",
+                      data=payload,
+                      params={'searchType':'TRB'},
+                      headers={'content-type':'application/x-www-form-urlencoded',
+                               'referer':'http://wireless2.fcc.gov/UlsApp/AsrSearch/asrRegistrationSearch.jsp'})
+
+    with open("foo.txt", "wb") as fout:
+        fout.write(r.text)
+
+    #print r.text
+    form_regex = re.compile('(<table.*summary\="Search Results Table">.*</table>).*<table border\="0" cellpadding\="3" cellspacing\="1" width\="100%" summary\="Results pages navigation">', re.U | re.S | re.MULTILINE)
+    s = form_regex.search(r.text)
+    #print s.group(1)
+    towerSoup = BeautifulSoup(s.group(1))
+    #print towerSoup.prettify()
+    towerTable = towerSoup.findAll(summary="Search Results Table")[0]
+    #print towerTable.text
+    result_list = []
+    for row in towerTable.findAll("tr"):
+        for col in row.findAll("td"):
+            result_list.append(col.text.strip())
+    print result_list
 
 if __name__ == "__main__":
     main()
