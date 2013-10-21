@@ -21,7 +21,8 @@ def main():
 
     soup = BeautifulSoup(r.text)
     qtyNotamsParser= re.compile('.*Number of NOTAMs:\D*(\d+)')
-    asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).TIL.(?P<expTime>\d+).*')
+    #asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).TIL.(?P<expTime>\d+).*')
+    asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).*OUT OF SERVICE.(?P<fromTime>\d+)-(?P<toTime>\d+).*')
     #print soup.prettify()
 
     for qtyNotams in soup.findAll(id="alertFont"):
@@ -39,11 +40,11 @@ def main():
         #print asrNotamsParser.findall(notamText)
         if j is not None:
             asr = j.group('asr')
-            expireTime = j.group('expTime')
+            toTime = j.group('toTime')
             #print j.group(0)
             asrlist.append(asr)
             print '\x1b[1;31m', "ASR number", '\x1b[m', asr
-            print "Expires", expireTime, decodeTime(expireTime, 6)
+            print "Expires", toTime, decodeTime(toTime, 6)
 
     for _asr in asrlist:
         getTowerInfo(_asr)
