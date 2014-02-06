@@ -5,12 +5,18 @@ from datetime import datetime as dt
 from datetime import timedelta
 import threading
 
+class myThread(threading.Thread):
+    def run(self):
+        #print self.getName()
+        super(myThread, self).run()
+        print self.getName() + " finished"
+
 def main():
     locations = ['3dw', 'bbg', 'eos']
     towers = ['1007705', '1007704', '1005399']
     asrlist = []
     thread_list = []
-    thread_pool = threading.BoundedSemaphore(value=4)
+    thread_pool = threading.BoundedSemaphore(value=5)
 
     print "Searching locations {locations} for towers {towers}".format(
         locations=locations, towers=towers)
@@ -51,10 +57,11 @@ def main():
             print "Expires", toTime, decodeTime(toTime, 6)
 
     for _asr in asrlist:
-        new_thread = threading.Thread(target=getTowerInfo, args=(_asr,thread_pool))
+        new_thread = myThread(target=getTowerInfo, args=(_asr,thread_pool))
         new_thread.start()
         thread_list.append(new_thread)
 
+    print threading.enumerate()
     #for t in thread_list:
     #    t.join()
 
