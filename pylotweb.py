@@ -3,11 +3,15 @@ from bs4 import BeautifulSoup
 import re
 from datetime import datetime as dt
 from datetime import timedelta
+import threading
 
 def main():
     locations = ['3dw', 'bbg', 'eos']
     towers = ['1007705', '1007704', '1005399']
     asrlist = []
+    thread_list = []
+    thread_pool = threading.BoundedSemaphore(value=4)
+
     print "Searching locations {locations} for towers {towers}".format(
         locations=locations, towers=towers)
 
@@ -43,17 +47,24 @@ def main():
             toTime = j.group('toTime')
             #print j.group(0)
             asrlist.append(asr)
-            print '\x1b[1;31m', "ASR number", '\x1b[m', asr
+            print '\x1b[1;37;41m', "ASR number", '\x1b[m', asr
             print "Expires", toTime, decodeTime(toTime, 6)
 
     for _asr in asrlist:
-        getTowerInfo(_asr)
+        new_thread = threading.Thread(target=getTowerInfo, args=(_asr,thread_pool))
+        new_thread.start()
+        thread_list.append(new_thread)
+
+    #for t in thread_list:
+    #    t.join()
+
     #getTowerInfo("100770")
 
 def decodeTime(timestamp, offset):
     return dt.strptime(timestamp, "%y%m%d%H%M") - timedelta(hours=offset)
 
-def getTowerInfo(asrnum):
+def getTowerInfo(asrnum, thread_pool):
+    thread_pool.acquire()
     payload = {"fiSearchByType":"registration_num",
                "jsValidated":"true",
                "fiSearchByValue":asrnum,
@@ -76,9 +87,9 @@ def getTowerInfo(asrnum):
                       params={'searchType':'TRB'},
                       headers={'content-type':'application/x-www-form-urlencoded',
                                'referer':'http://wireless2.fcc.gov/UlsApp/AsrSearch/asrRegistrationSearch.jsp'})
-
-    with open("foo.txt", "wb") as fout:
-        fout.write(r.text)
+    thread_pool.release()
+    #with open("foo.txt", "wb") as fout:
+    #    fout.write(r.text)
 
     #print r.text
     form_regex = re.compile('(<table.*summary\="Search Results Table">.*</table>).*<table border\="0" cellpadding\="3" cellspacing\="1" width\="100%" summary\="Results pages navigation">', re.U | re.S | re.MULTILINE)
