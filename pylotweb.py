@@ -4,12 +4,19 @@ import re
 from datetime import datetime as dt
 from datetime import timedelta
 import threading
+import win32console
+
 
 class myThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        foo = kwargs.pop('pool')
+        super(myThread, self).__init__(*args, **kwargs)
+
     def run(self):
         #print self.getName()
         super(myThread, self).run()
         print self.getName() + " finished"
+
 
 def main():
     locations = ['3dw', 'bbg', 'eos']
@@ -21,18 +28,18 @@ def main():
     print "Searching locations {locations} for towers {towers}".format(
         locations=locations, towers=towers)
 
-    payload = {"formatType":"DOMESTIC",
-               "retrieveLocId":"\n".join(locations),
-               "reportType":"REPORT",
-               "actionType":"notamRetrievalByICAOs"}
+    payload = {"formatType": "DOMESTIC",
+               "retrieveLocId": "\n".join(locations),
+               "reportType": "REPORT",
+               "actionType": "notamRetrievalByICAOs"}
 
     r = requests.post("https://pilotweb.nas.faa.gov/PilotWeb/notamRetrievalByICAOAction.do?method=displayByICAOs",
-                  data=payload)
+                      data=payload)
 
     soup = BeautifulSoup(r.text)
-    qtyNotamsParser= re.compile('.*Number of NOTAMs:\D*(\d+)')
+    qtyNotamsParser = re.compile('.*Number of NOTAMs:\D*(\d+)')
     #asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).TIL.(?P<expTime>\d+).*')
-    asrNotamsParser= re.compile('.*ASR.(?P<asr>\d+)\).*OUT OF SERVICE.(?P<fromTime>\d+)-(?P<toTime>\d+).*')
+    asrNotamsParser = re.compile('.*ASR.(?P<asr>\d+)\).*OUT OF SERVICE.(?P<fromTime>\d+)-(?P<toTime>\d+).*')
     #print soup.prettify()
 
     for qtyNotams in soup.findAll(id="alertFont"):
@@ -54,18 +61,19 @@ def main():
             #print j.group(0)
             asrlist.append(asr)
             print '\x1b[1;37;41m', "ASR number", '\x1b[m', asr
-            print "Expires", toTime, decodeTime(toTime, 6)
+            print "Expires", toTime, decodeTime(toTime, 5)
 
     for _asr in asrlist:
-        new_thread = myThread(target=getTowerInfo, args=(_asr,thread_pool))
+        new_thread = myThread(target=getTowerInfo, pool=thread_pool, args=(_asr,thread_pool))
         new_thread.start()
         thread_list.append(new_thread)
 
-    print threading.enumerate()
+    #print threading.enumerate()
     #for t in thread_list:
     #    t.join()
 
     #getTowerInfo("100770")
+
 
 def decodeTime(timestamp, offset):
     return dt.strptime(timestamp, "%y%m%d%H%M") - timedelta(hours=offset)
